@@ -19,6 +19,14 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
+# Downloaded datasets (large, cloned separately)
+noninterference_eval/data/BIPIA/
+noninterference_eval/data/InjecAgent/
+
+# Evaluation artefacts
+noninterference_eval/results/
+evaluation.log
+
 # Editor files
 *.swp
 *~
