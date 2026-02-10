@@ -13,6 +13,12 @@
 *.vrb
 *.pdf
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
 # Editor files
 *.swp
 *~
