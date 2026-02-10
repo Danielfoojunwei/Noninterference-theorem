@@ -1,0 +1,167 @@
+% proof.tex -- Noninterference theorem statement and proof
+% Included by main.tex in Section 4 (Noninterference Theorem)
+
+We now state and prove the main result.
+
+% ------------------------------------------------------------------
+\subsection{Theorem Statement}
+
+\begin{theorem}[Noninterference for Indirect Prompt Injection]
+\label{thm:noninterference}
+Consider two executions of the agent, indexed by $i \in \{1,2\}$, satisfying:
+\begin{enumerate}[label=(A\arabic*)]
+  \item \label{ass:init}
+    Identical initial state: $S_0^{(1)} = S_0^{(2)}$.
+  \item \label{ass:trusted}
+    Identical streams of trusted inputs: for all~$t$, the user messages,
+    system policies and tool results are the same in both executions.
+  \item \label{ass:untrusted}
+    Possibly differing untrusted input streams: the sequences
+    $U_t^{(1)}$ and $U_t^{(2)}$ of web-retrieved content, document content
+    and skill outputs may differ arbitrarily.
+  \item \label{ass:verifier}
+    The verifier enforces invariants~\ref{inv:taint-dep}
+    and~\ref{inv:cp-authority} at every step.
+\end{enumerate}
+
+Then for all time steps~$t \geq 0$:
+\begin{enumerate}[label=(\roman*)]
+  \item \textbf{Control-plane noninterference:}\quad
+    $\Pt^{(1)} = \Pt^{(2)}$.
+  \item \textbf{Action noninterference:}\quad
+    $a_t^{(1)} = a_t^{(2)}$.
+\end{enumerate}
+\end{theorem}
+
+In words: adversarial variations in untrusted data (web pages, documents or
+skill outputs) do not interfere with the agent's decisions or control-plane
+state.
+
+% ------------------------------------------------------------------
+\subsection{Proof}\label{sec:proof}
+
+We proceed by strong induction on the time step~$t$.
+
+\paragraph{Base case ($t = 0$).}
+By assumption~\ref{ass:init}, $S_0^{(1)} = S_0^{(2)}$, so in particular
+$P_0^{(1)} = P_0^{(2)}$.  The trusted inputs at step~$0$ are identical by
+assumption~\ref{ass:trusted}.  We must show $a_0^{(1)} = a_0^{(2)}$.
+
+The controller receives input $I_0 = I_0^{\mathrm{trusted}} \cup U_0$.  It
+constructs the IR graph~$G_0$ and proposes $\hat{a}_0$.  By
+invariant~\ref{inv:taint-dep}, the candidate tool call~$\hat{a}_0$ depends
+only on nodes~$v$ with $\taint(v) = 0$.
+
+\begin{lemma}[Untrusted isolation]\label{lem:isolation}
+Every IR node derived solely from untrusted input~$U_t$ satisfies
+$\taint(v) = 1$.  Conversely, every node with $\taint(v) = 0$ is determined
+entirely by the initial state~$S_0$ and the trusted input stream up to
+step~$t$.
+\end{lemma}
+
+\begin{proof}
+By Definition~\ref{def:taint}, raw spans from $\WEB$ or $\SKILL$ have
+$\taint = 1$.  By Definition~\ref{def:taint-prop}, taint propagates through
+the dependency relation: any node depending on a tainted node is itself
+tainted.  The only mechanism to clear taint is the $\textsf{VerifiedFact}$
+promotion, which requires verification against trusted sources---a procedure
+that depends only on trusted data.  Therefore, untrusted input can only
+produce tainted nodes, and untainted nodes are functions of trusted data alone.
+\end{proof}
+
+Applying Lemma~\ref{lem:isolation}: since $\hat{a}_0$ depends only on
+untainted nodes, and all untainted nodes at step~$0$ are identical across both
+executions (same $S_0$, same trusted input), we have
+$\hat{a}_0^{(1)} = \hat{a}_0^{(2)}$.
+
+The verifier is deterministic and receives the same proposed transition in
+both executions (same $S_0$, same $\hat{a}_0$).  Hence
+$V^{(1)} = V^{(2)}$, and the same branch of Equation~\eqref{eq:repair} is
+taken.  In either case:
+\begin{itemize}
+  \item If $V = 1$: $a_0^{(1)} = \hat{a}_0^{(1)} = \hat{a}_0^{(2)} = a_0^{(2)}$.
+  \item If $V = 0$: $a_0^{(1)} = \varnothing = a_0^{(2)}$.
+\end{itemize}
+
+For the control plane: by invariant~\ref{inv:cp-authority}, modifications to
+$\Pt$ require principal $p \succeq \USER$.  Untrusted inputs have principal
+$\WEB$ or $\SKILL$, which satisfy $\WEB, \SKILL \preceq \TOOL \prec \USER$.
+Therefore, untrusted inputs cannot modify $\Pt$.  Combined with identical
+trusted inputs and the same verifier outcome, we get
+$P_1^{(1)} = P_1^{(2)}$.
+
+\paragraph{Inductive step.}
+Assume that for all $s \leq t$:
+\[
+  P_s^{(1)} = P_s^{(2)}, \qquad
+  a_s^{(1)} = a_s^{(2)}, \qquad
+  S_s^{(1)}\big|_{\taint=0} = S_s^{(2)}\big|_{\taint=0},
+\]
+where $S_s\big|_{\taint=0}$ denotes the restriction of the state to untainted
+components (control plane, verified memory, risk budget and untainted IR
+nodes).
+
+At step $t+1$:
+
+\begin{enumerate}
+  \item \textbf{Identical untainted state.}
+    By the induction hypothesis, the untainted portions of $S_t$ are identical
+    across both executions.
+
+  \item \textbf{Identical tool results.}
+    Since $a_t^{(1)} = a_t^{(2)}$ (induction hypothesis) and tool results are
+    treated as trusted inputs (assumption~\ref{ass:trusted}), the tool
+    outputs at step $t+1$ are identical.
+
+  \item \textbf{IR construction.}
+    The controller $T_\theta$ processes $S_t$ and $I_{t+1}$.  Untrusted
+    input $U_{t+1}$ may differ, but by Lemma~\ref{lem:isolation} it produces
+    only tainted IR nodes.  All untainted nodes are determined by the
+    (identical) untainted state and trusted inputs.
+
+  \item \textbf{Candidate action.}
+    By invariant~\ref{inv:taint-dep}, $\hat{a}_{t+1}$ depends only on
+    untainted nodes, which are identical.  Hence
+    $\hat{a}_{t+1}^{(1)} = \hat{a}_{t+1}^{(2)}$.
+
+  \item \textbf{Verifier outcome.}
+    The verifier is deterministic and receives the same proposed transition.
+    Hence $V^{(1)} = V^{(2)}$, and by the same case analysis as the base
+    case, $a_{t+1}^{(1)} = a_{t+1}^{(2)}$.
+
+  \item \textbf{Control-plane update.}
+    By invariant~\ref{inv:cp-authority}, only $\SYS$ or $\USER$ principals
+    may modify $P_{t+1}$.  Untrusted data cannot alter $P_{t+1}$.  With
+    identical trusted inputs and identical verifier outcomes:
+    $P_{t+1}^{(1)} = P_{t+1}^{(2)}$.
+
+  \item \textbf{Untainted state propagation.}
+    Since the control plane, verified memory (updated only via trusted
+    verification), and risk budget (decremented by identical actions) are all
+    identical, we have
+    $S_{t+1}^{(1)}\big|_{\taint=0} = S_{t+1}^{(2)}\big|_{\taint=0}$.
+\end{enumerate}
+
+This completes the induction.
+
+\begin{corollary}[Output noninterference]\label{cor:output}
+Under the same assumptions, the agent's user-visible output stream
+$(y_0, y_1, \ldots)$ is identical across both executions, provided the output
+generation depends only on untainted IR nodes and the control-plane state.
+\end{corollary}
+
+\begin{proof}
+By Theorem~\ref{thm:noninterference}, $\Pt^{(1)} = \Pt^{(2)}$ and the
+untainted IR nodes are identical.  If $y_t$ depends only on these, then
+$y_t^{(1)} = y_t^{(2)}$.
+\end{proof}
+
+\begin{corollary}[Risk budget invariance]\label{cor:budget}
+Under the same assumptions, $B_t^{(1)} = B_t^{(2)}$ for all~$t$.
+\end{corollary}
+
+\begin{proof}
+The risk budget is decremented by the cost of each tool call.  Since
+$a_t^{(1)} = a_t^{(2)}$ for all~$t$, the same costs are incurred, and
+$B_t^{(1)} = B_t^{(2)}$ follows by induction.
+\end{proof}

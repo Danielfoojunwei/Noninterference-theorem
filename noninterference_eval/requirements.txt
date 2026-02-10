@@ -1,0 +1,28 @@
+# Core dependencies for noninterference evaluation
+openai>=1.0.0
+anthropic>=0.18.0
+transformers>=4.30.0
+torch>=2.0.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Evaluation and testing
+pytest>=7.3.0
+pytest-cov>=4.1.0
+
+# Logging and monitoring
+tqdm>=4.65.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Optional: For downloading datasets
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Optional: For visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0

@@ -1,0 +1,130 @@
+% definitions.tex -- Formal model definitions
+% Included by main.tex in Section 3 (Model Definitions)
+
+We model the agent as a discrete-time dynamical system that maintains
+structured state and uses a recursive language model (RLM) to choose actions.
+
+% ------------------------------------------------------------------
+\subsection{State Variables}\label{sec:state}
+
+Let the system state at step~$t$ be
+\begin{equation}\label{eq:state}
+  \St = (\Pt,\, \Mt,\, \Bt,\, \Gt),
+\end{equation}
+where:
+\begin{itemize}
+  \item $\Pt$ is the \emph{control-plane state} containing permissions, tool
+    policies and integration configuration.
+  \item $\Mt$ is a \emph{memory store} of verified facts and historical data.
+  \item $\Bt$ is a \emph{risk budget} representing how much risk can be spent
+    on tool calls in this session.
+  \item $\Gt = (\Vt, \Et)$ is a \emph{typed intermediate representation (IR)
+    graph} summarising the current context.
+\end{itemize}
+
+Each node $v \in \Vt$ has a type $\mathrm{type}(v)$ drawn from the set
+\begin{equation}\label{eq:types}
+  \calT = \bigl\{
+    \textsf{Policy},\;
+    \textsf{UserIntent},\;
+    \textsf{TrustedConfig},\;
+    \textsf{UntrustedQuote},\;
+    \textsf{CandidateFact},\;
+    \textsf{VerifiedFact},\;
+    \textsf{ToolResult},\;
+    \textsf{ActionRequest}
+  \bigr\}.
+\end{equation}
+
+% ------------------------------------------------------------------
+\subsection{Trust Lattice and Taint Labels}\label{sec:trust}
+
+Inputs are associated with principals
+\begin{equation}\label{eq:principals}
+  \calP = \{\SYS,\; \USER,\; \TOOL,\; \WEB,\; \SKILL\},
+\end{equation}
+ordered by authority $\preceq$ so that untrusted sources satisfy
+\[
+  \WEB,\;\SKILL \;\preceq\; \TOOL \;\preceq\; \USER \;\preceq\; \SYS.
+\]
+
+\begin{definition}[Provenance and taint]\label{def:taint}
+Each node~$v$ carries:
+\begin{enumerate}[label=(\alph*)]
+  \item a \emph{provenance label} $\prov(v) \in \calP$, recording which
+    principal produced the data; and
+  \item a \emph{taint bit} $\taint(v) \in \{0,1\}$, where $\taint(v) = 1$
+    indicates that~$v$ was derived from untrusted input.
+\end{enumerate}
+Raw spans originating from $\WEB$ or $\SKILL$ are tainted ($\taint = 1$).
+Facts extracted from tainted spans remain tainted until explicitly promoted to
+$\textsf{VerifiedFact}$ by a verification procedure.
+\end{definition}
+
+\begin{definition}[Taint propagation]\label{def:taint-prop}
+If node~$v$ depends on any node~$u$ with $\taint(u) = 1$, then
+$\taint(v) = 1$.  Formally, for the dependency relation~$\to$ on~$\Vt$:
+\[
+  \taint(v) = \max_{u :\, u \to v} \taint(u).
+\]
+The only exception is the $\textsf{VerifiedFact}$ promotion rule: a dedicated
+verification procedure may set $\taint(v) = 0$ after checking the content of
+$v$ against trusted sources.
+\end{definition}
+
+% ------------------------------------------------------------------
+\subsection{Update Function and Verifier}\label{sec:update}
+
+At each step, a recursive controller $T_\theta$ proposes an updated state and
+a candidate tool call:
+\begin{equation}\label{eq:controller}
+  (\hat{S}_{t+1},\, \hat{y}_t,\, \hat{a}_t) = T_\theta(\St,\, I_t),
+\end{equation}
+where $I_t$ denotes new inputs at step~$t$ (user message, retrieved data and
+tool outputs).
+
+\begin{definition}[Verifier]\label{def:verifier}
+A deterministic verifier $V$ checks the following invariants on every proposed
+transition:
+\begin{enumerate}[label=(V\arabic*)]
+  \item \label{inv:taint-dep}
+    \textbf{Taint-free action dependence.}
+    The candidate tool call~$\hat{a}_t$ depends only on IR nodes with
+    $\taint(v) = 0$.
+  \item \label{inv:cp-authority}
+    \textbf{Control-plane authority.}
+    Any proposed modification to $\Pt$ originates from a principal~$p$ with
+    $p \succeq \USER$ (i.e.\ only $\SYS$ or~$\USER$ may alter the control
+    plane).
+  \item \label{inv:memory-authority}
+    \textbf{Memory authority.}
+    Entries added to $\Mt$ from tainted sources are marked as
+    $\textsf{CandidateFact}$ and not as $\textsf{VerifiedFact}$.
+  \item \label{inv:budget}
+    \textbf{Risk budget.}
+    The proposed action does not exceed the remaining risk budget~$\Bt$.
+\end{enumerate}
+\end{definition}
+
+If the verifier accepts ($V = 1$), the proposed update is applied.  Otherwise,
+a safe repair is applied:
+\begin{equation}\label{eq:repair}
+  (S_{t+1},\, y_t,\, a_t) =
+  \begin{cases}
+    (\hat{S}_{t+1},\, \hat{y}_t,\, \hat{a}_t),
+      & \text{if } V = 1, \\[4pt]
+    \bigl(\mathrm{Repair}(\St),\, y_t^{\mathrm{safe}},\, \varnothing\bigr),
+      & \text{otherwise.}
+  \end{cases}
+\end{equation}
+
+The $\mathrm{Repair}$ function resets any fields that would violate invariants,
+emits a safe (no-op) output~$y_t^{\mathrm{safe}}$, and suppresses the tool
+call ($a_t = \varnothing$).
+
+\begin{remark}
+The verifier is \emph{deterministic}: its output depends only on the proposed
+transition and the current state, not on any stochastic component.  This is
+essential for the noninterference proof, because it ensures the repair path
+does not introduce dependence on untrusted data.
+\end{remark}
