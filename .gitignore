@@ -19,6 +19,20 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
+# Downloaded datasets (large, cloned separately)
+noninterference_eval/data/BIPIA/
+noninterference_eval/data/InjecAgent/
+
+# Evaluation artefacts
+noninterference_eval/results_smoke*/
+evaluation.log
+llm_evaluation.log
+
+# Results: track the final LLM report and metrics (not per-case JSON)
+noninterference_eval/results/llm_cases_*.json
+noninterference_eval/results/metrics_*.json
+noninterference_eval/results/report_*.txt
+
 # Editor files
 *.swp
 *~
