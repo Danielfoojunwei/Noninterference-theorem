@@ -41,12 +41,22 @@ Each node $v \in \Vt$ has a type $\mathrm{type}(v)$ drawn from the set
 
 Inputs are associated with principals
 \begin{equation}\label{eq:principals}
-  \calP = \{\SYS,\; \USER,\; \TOOL,\; \WEB,\; \SKILL\},
+  \calP = \{\SYS,\; \USER,\; \TOOLauth,\; \TOOLunauth,\; \WEB,\; \SKILL\},
 \end{equation}
 ordered by authority $\preceq$ so that untrusted sources satisfy
 \[
-  \WEB,\;\SKILL \;\preceq\; \TOOL \;\preceq\; \USER \;\preceq\; \SYS.
+  \WEB,\;\SKILL \;\preceq\; \TOOLunauth \;\preceq\; \TOOLauth \;\preceq\; \USER \;\preceq\; \SYS.
 \]
+
+We distinguish between \emph{authenticated} and \emph{unauthenticated} tool
+outputs.  $\TOOLauth$ denotes outputs from sources with provenance guarantees
+(signed API responses, allowlisted endpoints, content-addressed storage) and is
+treated as trusted ($\taint = 0$).  $\TOOLunauth$ denotes outputs from sources
+that may be adversary-controlled (web browsers, email APIs, retrieval plugins,
+file readers) and is treated as \textbf{tainted by default} ($\taint = 1$),
+the same as $\WEB$.  This conservative default reflects that tools like web
+browsers and email inboxes are attack surfaces whose outputs can contain
+adversarial content.
 
 \begin{definition}[Provenance and taint]\label{def:taint}
 Each node~$v$ carries:
@@ -56,9 +66,9 @@ Each node~$v$ carries:
   \item a \emph{taint bit} $\taint(v) \in \{0,1\}$, where $\taint(v) = 1$
     indicates that~$v$ was derived from untrusted input.
 \end{enumerate}
-Raw spans originating from $\WEB$ or $\SKILL$ are tainted ($\taint = 1$).
-Facts extracted from tainted spans remain tainted until explicitly promoted to
-$\textsf{VerifiedFact}$ by a verification procedure.
+Raw spans originating from $\WEB$, $\SKILL$, or $\TOOLunauth$ are tainted
+($\taint = 1$).  Facts extracted from tainted spans remain tainted until
+explicitly promoted to $\textsf{VerifiedFact}$ by a verification procedure.
 \end{definition}
 
 \begin{definition}[Taint propagation]\label{def:taint-prop}
@@ -71,6 +81,36 @@ The only exception is the $\textsf{VerifiedFact}$ promotion rule: a dedicated
 verification procedure may set $\taint(v) = 0$ after checking the content of
 $v$ against trusted sources.
 \end{definition}
+
+% ------------------------------------------------------------------
+\subsection{Declassification via VerifiedFact Promotion}\label{sec:declass}
+
+The only mechanism to clear taint is \textsf{VerifiedFact} promotion.  This is
+the critical component that determines the system's practical utility.
+
+\begin{definition}[Verification procedure]\label{def:verification}
+A \textsf{VerifiedFact} promotion of a candidate node~$v$ requires:
+\begin{enumerate}[label=(\roman*)]
+  \item \textbf{Cross-reference check}: the content of~$v$ is corroborated by
+    at least one trusted source (provenance $\succeq \TOOLauth$).
+  \item \textbf{Schema validation}: $v$ conforms to the expected schema for
+    its type (e.g.\ a price is numeric, an email address matches format).
+  \item \textbf{Allowlist match} (for action-influencing facts): if~$v$ will
+    appear in the dependency set of an action, its content must match an
+    allowlisted pattern defined in the system policy~$\Pt$.
+\end{enumerate}
+The verification output depends only on the content of~$v$ and trusted data
+(the trusted corroborating source, the schema, the allowlist).  It does not
+depend on any other tainted nodes.
+\end{definition}
+
+\begin{remark}
+We do not empirically evaluate the declassification pathway in this work.  A
+production system must measure false-accept rates (tainted content wrongly
+promoted) and false-reject rates (legitimate content blocked).  The adversary
+model against verification---e.g.\ SEO poisoning of trusted sources---is
+outside the scope of this paper.
+\end{remark}
 
 % ------------------------------------------------------------------
 \subsection{Update Function and Verifier}\label{sec:update}
@@ -89,8 +129,12 @@ transition:
 \begin{enumerate}[label=(V\arabic*)]
   \item \label{inv:taint-dep}
     \textbf{Taint-free action dependence.}
-    The candidate tool call~$\hat{a}_t$ depends only on IR nodes with
-    $\taint(v) = 0$.
+    The action-selection function receives only IR nodes with
+    $\taint(v) = 0$ as input.  Formally, the candidate action is computed as
+    $\hat{a}_t = f(\pi_0(\Gt),\, \Pt,\, \Mt)$ where
+    $\pi_0(\Gt) = \{v \in \Vt : \taint(v) = 0\}$ is the projection onto
+    untainted nodes.  Tainted nodes are excluded from this projection
+    \emph{before} the language model's forward pass.
   \item \label{inv:cp-authority}
     \textbf{Control-plane authority.}
     Any proposed modification to $\Pt$ originates from a principal~$p$ with
@@ -105,6 +149,17 @@ transition:
     The proposed action does not exceed the remaining risk budget~$\Bt$.
 \end{enumerate}
 \end{definition}
+
+\begin{remark}[What ``depend'' means for a neural network]
+For a neural network, we cannot prove that internal logits are independent of
+specific input tokens (the computation is opaque).  Instead,
+invariant~\ref{inv:taint-dep} ensures that tainted tokens are \emph{not
+present in the input} to the forward pass that produces action decisions.
+``Dependence'' is therefore defined at the system level (input filtering), not
+at the model level (internal computation).  This is analogous to
+hardware-level isolation (e.g.\ TrustZone) rather than software-level
+information-flow tracking.
+\end{remark}
 
 If the verifier accepts ($V = 1$), the proposed update is applied.  Otherwise,
 a safe repair is applied:
@@ -121,6 +176,18 @@ a safe repair is applied:
 The $\mathrm{Repair}$ function resets any fields that would violate invariants,
 emits a safe (no-op) output~$y_t^{\mathrm{safe}}$, and suppresses the tool
 call ($a_t = \varnothing$).
+
+\begin{remark}[Repair failure modes]
+The repair semantics must be designed to avoid secondary vulnerabilities:
+(a)~\emph{side-channel leakage}: the repair response should not reveal that an
+injection was detected (use a generic template also used for legitimate
+refusals);
+(b)~\emph{denial of service}: the agent should still complete tasks using
+trusted content, escalating to user confirmation if all relevant content is
+tainted;
+(c)~\emph{partial completion}: an audit log of suppressed actions should be
+presented to the user for review.
+\end{remark}
 
 \begin{remark}
 The verifier is \emph{deterministic}: its output depends only on the proposed

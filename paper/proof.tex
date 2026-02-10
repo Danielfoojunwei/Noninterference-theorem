@@ -8,13 +8,14 @@ We now state and prove the main result.
 
 \begin{theorem}[Noninterference for Indirect Prompt Injection]
 \label{thm:noninterference}
-Consider two executions of the agent, indexed by $i \in \{1,2\}$, satisfying:
+Consider two executions of the agent system, indexed by $i \in \{1,2\}$,
+satisfying:
 \begin{enumerate}[label=(A\arabic*)]
   \item \label{ass:init}
     Identical initial state: $S_0^{(1)} = S_0^{(2)}$.
   \item \label{ass:trusted}
-    Identical streams of trusted inputs: for all~$t$, the user messages,
-    system policies and tool results are the same in both executions.
+    Identical streams of trusted inputs: for all~$t$, the user messages and
+    system policies are the same in both executions.
   \item \label{ass:untrusted}
     Possibly differing untrusted input streams: the sequences
     $U_t^{(1)}$ and $U_t^{(2)}$ of web-retrieved content, document content
@@ -26,16 +27,36 @@ Consider two executions of the agent, indexed by $i \in \{1,2\}$, satisfying:
 
 Then for all time steps~$t \geq 0$:
 \begin{enumerate}[label=(\roman*)]
-  \item \textbf{Control-plane noninterference:}\quad
-    $\Pt^{(1)} = \Pt^{(2)}$.
   \item \textbf{Action noninterference:}\quad
     $a_t^{(1)} = a_t^{(2)}$.
+  \item \textbf{Control-plane noninterference:}\quad
+    $\Pt^{(1)} = \Pt^{(2)}$.
+  \item \textbf{Tool-output equivalence} (derived):\quad
+    Since actions are identical, tool outputs are identical.
 \end{enumerate}
 \end{theorem}
 
 In words: adversarial variations in untrusted data (web pages, documents or
-skill outputs) do not interfere with the agent's decisions or control-plane
-state.
+skill outputs) do not interfere with the agent system's action-selection
+function output or control-plane state.
+
+\begin{remark}[On assumption~\ref{ass:trusted} and circularity]
+In a na\"{\i}ve formulation, one might assume ``tool results are identical''
+as a precondition.  This would be circular: tool results depend on which tools
+were called, and we are trying to prove that tool calls are identical.  Our
+formulation resolves this:
+\begin{enumerate}
+  \item \ref{ass:trusted} states only that \emph{user messages and system
+    policies} are identical---genuinely exogenous inputs.
+  \item Tool-output equivalence is \emph{derived}: since
+    $a_t^{(1)} = a_t^{(2)}$ (proved), and both executions call the same tool
+    with the same arguments against the same external state, the tool outputs
+    at step $t{+}1$ are identical.
+  \item This makes the induction well-founded: at step $t{+}1$, tool outputs
+    from step~$t$ are identical because the actions at step~$t$ were identical
+    (by the inductive hypothesis).
+\end{enumerate}
+\end{remark}
 
 % ------------------------------------------------------------------
 \subsection{Proof}\label{sec:proof}
@@ -47,10 +68,9 @@ By assumption~\ref{ass:init}, $S_0^{(1)} = S_0^{(2)}$, so in particular
 $P_0^{(1)} = P_0^{(2)}$.  The trusted inputs at step~$0$ are identical by
 assumption~\ref{ass:trusted}.  We must show $a_0^{(1)} = a_0^{(2)}$.
 
-The controller receives input $I_0 = I_0^{\mathrm{trusted}} \cup U_0$.  It
-constructs the IR graph~$G_0$ and proposes $\hat{a}_0$.  By
-invariant~\ref{inv:taint-dep}, the candidate tool call~$\hat{a}_0$ depends
-only on nodes~$v$ with $\taint(v) = 0$.
+The controller constructs the IR graph~$G_0$.  By
+invariant~\ref{inv:taint-dep}, the action-selection function receives as input
+only the projection $\pi_0(G_0) = \{v \in V_0 : \taint(v) = 0\}$.
 
 \begin{lemma}[Untrusted isolation]\label{lem:isolation}
 Every IR node derived solely from untrusted input~$U_t$ satisfies
@@ -60,18 +80,22 @@ step~$t$.
 \end{lemma}
 
 \begin{proof}
-By Definition~\ref{def:taint}, raw spans from $\WEB$ or $\SKILL$ have
-$\taint = 1$.  By Definition~\ref{def:taint-prop}, taint propagates through
-the dependency relation: any node depending on a tainted node is itself
-tainted.  The only mechanism to clear taint is the $\textsf{VerifiedFact}$
-promotion, which requires verification against trusted sources---a procedure
-that depends only on trusted data.  Therefore, untrusted input can only
-produce tainted nodes, and untainted nodes are functions of trusted data alone.
+By Definition~\ref{def:taint}, raw spans from $\WEB$, $\SKILL$, or
+$\TOOLunauth$ have $\taint = 1$.  By Definition~\ref{def:taint-prop}, taint
+propagates through the dependency relation: any node depending on a tainted
+node is itself tainted.  The only mechanism to clear taint is the
+$\textsf{VerifiedFact}$ promotion (Definition~\ref{def:verification}), which
+requires verification against trusted sources---a procedure whose output
+depends only on trusted data (the content of~$v$, the corroborating trusted
+source, the schema, and the allowlist, all of which are functions of trusted
+inputs).  Therefore, untrusted input can only produce tainted nodes, and
+untainted nodes are functions of trusted data alone.
 \end{proof}
 
-Applying Lemma~\ref{lem:isolation}: since $\hat{a}_0$ depends only on
-untainted nodes, and all untainted nodes at step~$0$ are identical across both
-executions (same $S_0$, same trusted input), we have
+Applying Lemma~\ref{lem:isolation}: since the action-selection function
+receives only $\pi_0(G_0)$ (untainted nodes), and all untainted nodes at
+step~$0$ are identical across both executions (same $S_0$, same trusted input),
+the function receives identical input and produces identical output:
 $\hat{a}_0^{(1)} = \hat{a}_0^{(2)}$.
 
 The verifier is deterministic and receives the same proposed transition in
@@ -85,7 +109,8 @@ taken.  In either case:
 
 For the control plane: by invariant~\ref{inv:cp-authority}, modifications to
 $\Pt$ require principal $p \succeq \USER$.  Untrusted inputs have principal
-$\WEB$ or $\SKILL$, which satisfy $\WEB, \SKILL \preceq \TOOL \prec \USER$.
+$\WEB$, $\SKILL$, or $\TOOLunauth$, all of which satisfy
+$\WEB, \SKILL \preceq \TOOLunauth \prec \TOOLauth \preceq \USER$.
 Therefore, untrusted inputs cannot modify $\Pt$.  Combined with identical
 trusted inputs and the same verifier outcome, we get
 $P_1^{(1)} = P_1^{(2)}$.
@@ -108,20 +133,23 @@ At step $t+1$:
     By the induction hypothesis, the untainted portions of $S_t$ are identical
     across both executions.
 
-  \item \textbf{Identical tool results.}
-    Since $a_t^{(1)} = a_t^{(2)}$ (induction hypothesis) and tool results are
-    treated as trusted inputs (assumption~\ref{ass:trusted}), the tool
-    outputs at step $t+1$ are identical.
+  \item \textbf{Identical tool results (derived, not assumed).}
+    Since $a_t^{(1)} = a_t^{(2)}$ (induction hypothesis), both executions
+    call the same tool with the same arguments.  Assuming deterministic tool
+    behaviour against the same external state, the tool outputs at step $t+1$
+    are identical.
 
   \item \textbf{IR construction.}
     The controller $T_\theta$ processes $S_t$ and $I_{t+1}$.  Untrusted
     input $U_{t+1}$ may differ, but by Lemma~\ref{lem:isolation} it produces
     only tainted IR nodes.  All untainted nodes are determined by the
-    (identical) untainted state and trusted inputs.
+    (identical) untainted state, identical trusted inputs, and identical tool
+    outputs.
 
   \item \textbf{Candidate action.}
-    By invariant~\ref{inv:taint-dep}, $\hat{a}_{t+1}$ depends only on
-    untainted nodes, which are identical.  Hence
+    By invariant~\ref{inv:taint-dep}, the action-selection function receives
+    only the untainted projection $\pi_0(G_{t+1})$, which is identical across
+    both executions.  Hence
     $\hat{a}_{t+1}^{(1)} = \hat{a}_{t+1}^{(2)}$.
 
   \item \textbf{Verifier outcome.}
