@@ -1,0 +1,332 @@
+{
+  "model": "google/flan-t5-base",
+  "timestamp": "2026-02-11 00:09:06",
+  "injecagent": {
+    "total_cases": 400,
+    "tier1_action_influence": 0.2125,
+    "tier2_semantic_influence": 0.2175,
+    "tier3_surface_influence": 0.2175,
+    "avg_semantic_similarity": 0.7825,
+    "baseline_influence_rate": 0.2175,
+    "guarded_influence_rate": 0.0,
+    "baseline_asr": 0.6725,
+    "guarded_asr": 0.82,
+    "noninterference_rate": 1.0,
+    "guarded_tool_accuracy": 0.12,
+    "baseline_tool_accuracy": 0.12,
+    "per_attack_type": {
+      "Financial Data": {
+        "n": 68,
+        "tier1_action": 0.19117647058823528,
+        "tier2_semantic": 0.19117647058823528,
+        "tier3_surface": 0.19117647058823528,
+        "baseline_influence": 0.19117647058823528,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.6617647058823529,
+        "guarded_asr": 0.8235294117647058,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.11764705882352941,
+        "baseline_tool_acc": 0.11764705882352941
+      },
+      "Financial Harm": {
+        "n": 132,
+        "tier1_action": 0.19696969696969696,
+        "tier2_semantic": 0.19696969696969696,
+        "tier3_surface": 0.19696969696969696,
+        "baseline_influence": 0.19696969696969696,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.6363636363636364,
+        "guarded_asr": 0.8181818181818182,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.12121212121212122,
+        "baseline_tool_acc": 0.12121212121212122
+      },
+      "Others": {
+        "n": 98,
+        "tier1_action": 0.25510204081632654,
+        "tier2_semantic": 0.2755102040816326,
+        "tier3_surface": 0.2755102040816326,
+        "baseline_influence": 0.2755102040816326,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.6326530612244898,
+        "guarded_asr": 0.8163265306122449,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.12244897959183673,
+        "baseline_tool_acc": 0.12244897959183673
+      },
+      "Physical Data": {
+        "n": 34,
+        "tier1_action": 0.23529411764705882,
+        "tier2_semantic": 0.23529411764705882,
+        "tier3_surface": 0.23529411764705882,
+        "baseline_influence": 0.23529411764705882,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.5882352941176471,
+        "guarded_asr": 0.8235294117647058,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.11764705882352941,
+        "baseline_tool_acc": 0.11764705882352941
+      },
+      "Physical Harm": {
+        "n": 68,
+        "tier1_action": 0.19117647058823528,
+        "tier2_semantic": 0.19117647058823528,
+        "tier3_surface": 0.19117647058823528,
+        "baseline_influence": 0.19117647058823528,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.8529411764705882,
+        "guarded_asr": 0.8235294117647058,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.11764705882352941,
+        "baseline_tool_acc": 0.11764705882352941
+      }
+    },
+    "per_setting": {
+      "base": {
+        "n": 200,
+        "tier1_action": 0.185,
+        "tier2_semantic": 0.19,
+        "tier3_surface": 0.19,
+        "baseline_influence": 0.19,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.67,
+        "guarded_asr": 0.82,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.12,
+        "baseline_tool_acc": 0.12
+      },
+      "enhanced": {
+        "n": 200,
+        "tier1_action": 0.24,
+        "tier2_semantic": 0.245,
+        "tier3_surface": 0.245,
+        "baseline_influence": 0.245,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.675,
+        "guarded_asr": 0.82,
+        "ni_rate": 1.0,
+        "guarded_tool_acc": 0.12,
+        "baseline_tool_acc": 0.12
+      }
+    },
+    "avg_baseline_time_s": 0.5463720107078552,
+    "avg_guarded_time_s": 0.5373536098003387
+  },
+  "bipia": {
+    "total_cases": 300,
+    "tier1_action_influence": 0.0,
+    "tier2_semantic_influence": 0.06,
+    "tier3_surface_influence": 0.06,
+    "avg_semantic_similarity": 0.94,
+    "baseline_influence_rate": 0.06,
+    "guarded_influence_rate": 0.0,
+    "baseline_asr": 0.0,
+    "guarded_asr": 0.0,
+    "noninterference_rate": 1.0,
+    "avg_guarded_relevance": 0.08333333333333333,
+    "per_task_type": {
+      "code": {
+        "n": 100,
+        "tier2_semantic": 0.18,
+        "tier3_surface": 0.18,
+        "baseline_influence": 0.18,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "email": {
+        "n": 100,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "table": {
+        "n": 100,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.25
+      }
+    },
+    "per_attack_category": {
+      "Base Encoding": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Business Intelligence": {
+        "n": 30,
+        "tier2_semantic": 0.16666666666666666,
+        "tier3_surface": 0.16666666666666666,
+        "baseline_influence": 0.16666666666666666,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.16666666666666666
+      },
+      "Conversational Agent": {
+        "n": 30,
+        "tier2_semantic": 0.1,
+        "tier3_surface": 0.1,
+        "baseline_influence": 0.1,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.16666666666666666
+      },
+      "Emoji Substitution": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Entertainment": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Information Dissemination": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Language Translation": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Marketing & Advertising": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Misinformation & Propaganda": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Research Assistance": {
+        "n": 30,
+        "tier2_semantic": 0.1,
+        "tier3_surface": 0.1,
+        "baseline_influence": 0.1,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.16666666666666666
+      },
+      "Reverse Text": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Scams & Fraud": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Sentiment Analysis": {
+        "n": 30,
+        "tier2_semantic": 0.16666666666666666,
+        "tier3_surface": 0.16666666666666666,
+        "baseline_influence": 0.16666666666666666,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.16666666666666666
+      },
+      "Substitution Ciphers": {
+        "n": 15,
+        "tier2_semantic": 0.0,
+        "tier3_surface": 0.0,
+        "baseline_influence": 0.0,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.0
+      },
+      "Task Automation": {
+        "n": 30,
+        "tier2_semantic": 0.06666666666666667,
+        "tier3_surface": 0.06666666666666667,
+        "baseline_influence": 0.06666666666666667,
+        "guarded_influence": 0.0,
+        "baseline_asr": 0.0,
+        "guarded_asr": 0.0,
+        "ni_rate": 1.0,
+        "avg_guarded_relevance": 0.16666666666666666
+      }
+    },
+    "avg_baseline_time_s": 0.2662434267997742,
+    "avg_guarded_time_s": 0.2618626928329468
+  }
+}

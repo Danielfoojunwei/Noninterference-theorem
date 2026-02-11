@@ -39,7 +39,9 @@ class NodeType(Enum):
 class Principal(Enum):
     SYS = "SYS"
     USER = "USER"
-    TOOL = "TOOL"
+    TOOL_AUTH = "TOOL_AUTH"      # Authenticated tool output (signed/allowlisted)
+    TOOL_UNAUTH = "TOOL_UNAUTH"  # Unauthenticated tool output (tainted by default)
+    TOOL = "TOOL"                # Legacy alias — treated as TOOL_UNAUTH
     WEB = "WEB"
     SKILL = "SKILL"
 
@@ -47,8 +49,19 @@ class Principal(Enum):
     def authority(self) -> int:
         return {
             Principal.WEB: 0, Principal.SKILL: 0,
-            Principal.TOOL: 1, Principal.USER: 2, Principal.SYS: 3,
+            Principal.TOOL_UNAUTH: 0,  # same trust level as WEB
+            Principal.TOOL: 0,         # legacy: conservative default
+            Principal.TOOL_AUTH: 1,    # authenticated tools are trusted
+            Principal.USER: 2, Principal.SYS: 3,
         }[self]
+
+    @property
+    def is_tainted(self) -> bool:
+        """Whether content from this principal is tainted by default."""
+        return self in (
+            Principal.WEB, Principal.SKILL,
+            Principal.TOOL_UNAUTH, Principal.TOOL,
+        )
 
     def __le__(self, other):
         return self.authority <= other.authority
@@ -314,7 +327,7 @@ class GuardedAgent:
         self, content: str, ntype: NodeType, principal: Principal,
     ) -> IRNode:
         self._node_counter += 1
-        tainted = principal in (Principal.WEB, Principal.TOOL, Principal.SKILL)
+        tainted = principal.is_tainted
         node = IRNode(
             id="n%d" % self._node_counter,
             node_type=ntype,

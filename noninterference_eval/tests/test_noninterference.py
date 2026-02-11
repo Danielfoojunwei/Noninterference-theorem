@@ -5,6 +5,7 @@ Verifies core properties:
   1. Baseline agent IS vulnerable to injection
   2. Guarded agent IS NOT vulnerable
   3. Noninterference holds: guarded output is invariant to untrusted variations
+  4. Trust lattice: TOOL_AUTH vs TOOL_UNAUTH distinction
 """
 
 import sys
@@ -158,10 +159,38 @@ class TestIRGraph:
         assert "evil payload" in text
 
 
+# ── Trust lattice ────────────────────────────────────────────────────────
+
 class TestTrustLattice:
     def test_ordering(self):
-        assert Principal.WEB <= Principal.TOOL
-        assert Principal.SKILL <= Principal.TOOL
-        assert Principal.TOOL <= Principal.USER
+        assert Principal.WEB <= Principal.TOOL_AUTH
+        assert Principal.SKILL <= Principal.TOOL_AUTH
+        assert Principal.TOOL_AUTH <= Principal.USER
         assert Principal.USER <= Principal.SYS
         assert not (Principal.USER <= Principal.WEB)
+
+    def test_tool_unauth_same_level_as_web(self):
+        """TOOL_UNAUTH should be at the same trust level as WEB."""
+        assert Principal.TOOL_UNAUTH.authority == Principal.WEB.authority
+
+    def test_tool_auth_higher_than_web(self):
+        """TOOL_AUTH should be at a higher trust level than WEB."""
+        assert Principal.TOOL_AUTH.authority > Principal.WEB.authority
+
+    def test_legacy_tool_is_tainted(self):
+        """Legacy TOOL principal should be tainted (conservative default)."""
+        assert Principal.TOOL.is_tainted
+
+    def test_tool_unauth_is_tainted(self):
+        """Unauthenticated tool output is tainted by default."""
+        assert Principal.TOOL_UNAUTH.is_tainted
+
+    def test_tool_auth_is_not_tainted(self):
+        """Authenticated tool output is NOT tainted."""
+        assert not Principal.TOOL_AUTH.is_tainted
+
+    def test_user_is_not_tainted(self):
+        assert not Principal.USER.is_tainted
+
+    def test_web_is_tainted(self):
+        assert Principal.WEB.is_tainted
