@@ -302,19 +302,32 @@ We leave this for future work.
 
 ## 6. Results
 
-### 6.1 Primary Results
+### 6.1 Primary Results — Three-Tier Influence
 
 | Metric | InjecAgent (n=400) | BIPIA (n=300) |
 |---|---|---|
-| **Baseline influence rate** | **21.8%** | **6.0%** |
-| **Guarded influence rate** | **0.0%** | **0.0%** |
+| **Tier 1 — Action influence** | **21.2%** | N/A (no tool call) |
+| **Tier 2 — Semantic influence** | **21.8%** | **6.0%** |
+| **Tier 3 — Surface influence** | **21.8%** | **6.0%** |
+| Avg semantic similarity | 0.782 | 0.940 |
+| **Guarded influence (all tiers)** | **0.0%** | **0.0%** |
 | **Noninterference rate** | **100.0%** | **100.0%** |
-| Avg inference time (baseline) | 0.434s | 0.205s |
-| Avg inference time (guarded) | 0.432s | 0.203s |
+| Avg inference time (baseline) | 0.546s | ~0.2s |
+| Avg inference time (guarded) | 0.537s | ~0.2s |
 
-**Interpretation**: The baseline agent is genuinely influenced by injections in 21.8% of InjecAgent cases and 6.0% of BIPIA cases. The guarded agent shows 0% influence and 100% noninterference across all 700 test cases.
+**Interpretation**: The three-tier framework reveals that most InjecAgent influence is at the action level (Tier 1 = 21.2%): the injection genuinely changes which tool the model selects. In BIPIA, influence is semantic (Tier 2 = 6.0%): the injection alters the response content without a tool-call change. The guarded agent shows 0% influence across all three tiers and 100% noninterference across all 700 test cases.
 
 **The 0% is expected, not surprising**: The guarded agent receives identical input regardless of whether an injection is present (the injection is stripped before inference). Under deterministic decoding, identical input produces identical output. The 0% confirms the enforcement layer is correctly implemented. Any result above 0% would indicate an implementation bug.
+
+### 6.1.1 Utility Metrics
+
+| Metric | InjecAgent (n=400) | BIPIA (n=300) |
+|---|---|---|
+| Guarded tool accuracy | 12.0% | — |
+| Baseline tool accuracy (clean) | 12.0% | — |
+| Guarded relevance (Jaccard) | — | 0.083 |
+
+**Key finding**: The guarded agent has **identical tool accuracy** to the undefended baseline (12.0% = 12.0%). The defense does not degrade utility compared to the clean baseline. The low absolute accuracy is a property of the surrogate model (FLAN-T5-base cannot reliably match the InjecAgent tool catalogue's 17+ specialised tool names), not a consequence of the defense.
 
 ### 6.2 Concrete Attack Examples
 
@@ -344,30 +357,32 @@ Case bipia_code_80 — Category: Business Intelligence
 
 ### 6.3 Breakdown by Attack Type (InjecAgent)
 
-| Attack Type | n | Baseline Influence | Guarded Influence | NI Rate |
-|---|---|---|---|---|
-| Physical Harm | 68 | 19.1% | 0.0% | 100% |
-| Financial Harm | 132 | 19.7% | 0.0% | 100% |
-| Financial Data | 68 | 19.1% | 0.0% | 100% |
-| Physical Data | 34 | 23.5% | 0.0% | 100% |
-| Others | 98 | 27.6% | 0.0% | 100% |
+| Attack Type | n | T1 Action | T2 Semantic | T3 Surface | NI Rate |
+|---|---|---|---|---|---|
+| Physical Harm | 68 | 19.1% | 19.1% | 19.1% | 100% |
+| Financial Harm | 132 | 19.7% | 19.7% | 19.7% | 100% |
+| Financial Data | 68 | 19.1% | 19.1% | 19.1% | 100% |
+| Physical Data | 34 | 23.5% | 23.5% | 23.5% | 100% |
+| Others | 98 | 25.5% | 27.6% | 27.6% | 100% |
+
+Note: For most attack types, T1 = T2 = T3, meaning the injection causes a full tool-call change (the most severe form of influence). In "Others", 2% of cases show surface/semantic change without an action change.
 
 ### 6.4 Base vs Enhanced Attacks (InjecAgent)
 
-| Setting | n | Baseline Influence | Guarded Influence | NI Rate |
-|---|---|---|---|---|
-| Base | 200 | 19.0% | 0.0% | 100% |
-| Enhanced | 200 | 24.5% | 0.0% | 100% |
+| Setting | n | T1 Action | T2 Semantic | T3 Surface | NI Rate |
+|---|---|---|---|---|---|
+| Base | 200 | 18.5% | 19.0% | 19.0% | 100% |
+| Enhanced | 200 | 24.0% | 24.5% | 24.5% | 100% |
 
-Enhanced attacks increase baseline influence by 29% relative (19.0% → 24.5%), confirming that stronger attacks are more effective against unprotected models. The architectural defense is immune to both.
+Enhanced attacks increase baseline action influence by 30% relative (18.5% → 24.0%), confirming that stronger attacks are more effective against unprotected models. The architectural defense is immune to both.
 
 ### 6.5 Breakdown by Task Type (BIPIA)
 
-| Task Type | n | Baseline Influence | Guarded Influence | NI Rate |
-|---|---|---|---|---|
-| Code | 100 | **18.0%** | 0.0% | 100% |
-| Email | 100 | 0.0% | 0.0% | 100% |
-| Table | 100 | 0.0% | 0.0% | 100% |
+| Task Type | n | T2 Semantic | T3 Surface | NI Rate | Guarded Relevance |
+|---|---|---|---|---|---|
+| Code | 100 | **18.0%** | **18.0%** | 100% | 0.000 |
+| Email | 100 | 0.0% | 0.0% | 100% | 0.000 |
+| Table | 100 | 0.0% | 0.0% | 100% | 0.250 |
 
 ### 6.6 Comparison with Published SOTA
 
