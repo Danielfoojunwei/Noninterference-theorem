@@ -38,6 +38,8 @@
 \newcommand{\SYS}{\textsf{SYS}}
 \newcommand{\USER}{\textsf{USER}}
 \newcommand{\TOOL}{\textsf{TOOL}}
+\newcommand{\TOOLauth}{\textsf{TOOL}_{\textsf{auth}}}
+\newcommand{\TOOLunauth}{\textsf{TOOL}_{\textsf{unauth}}}
 \newcommand{\WEB}{\textsf{WEB}}
 \newcommand{\SKILL}{\textsf{SKILL}}
 
@@ -56,24 +58,30 @@ documents---within the same context window that contains system prompts and
 user instructions.  Indirect prompt injection exploits this shared context to
 embed malicious instructions in otherwise legitimate data, silently influencing
 the agent's behaviour.  We formalise the security requirement as a
-\emph{noninterference} property: adversarial variations in untrusted data must
-not influence the agent's decisions or modify its control plane.  We model the
-agent as a discrete-time dynamical system driven by a recursive language model
-(RLM), define a typed intermediate representation with taint tracking and a
-trust lattice, and prove that under strict invariants the agent's tool calls
-and control-plane state are fully determined by trusted inputs alone.
+\emph{noninterference} property adapted from information-flow
+control~\cite{goguen1982}: adversarial variations in untrusted data must not
+influence the agent's decisions or modify its control plane.  We model the
+agent as a discrete-time dynamical system, define a typed intermediate
+representation with taint tracking and a trust lattice, and prove that a
+\textbf{system-level} enforcement layer---a deterministic verifier that filters
+tainted content from the action-selection dependency set before each inference
+step---guarantees action invariance to untrusted input variations.  The theorem
+is a property of the \emph{enforcement architecture}, not of the underlying
+language model's internal reasoning: it holds because tainted content is
+excluded from the model's input when selecting actions, not because the model
+chooses to ignore it.
 \end{abstract}
 
 % ==================================================================
 \section{Introduction}\label{sec:intro}
 
-Agentic AI systems such as OpenClaw autonomously execute tool calls and chain
-operations across external services.  Because they ingest untrusted
-content---retrieved web pages, user-uploaded documents, skill
-outputs---alongside system prompts and direct user instructions, they are
-vulnerable to \emph{indirect prompt injection}: an adversary embeds hidden
-instructions in external data that reshape the agent's intent, redirect tool
-usage, or trigger unauthorised actions~\cite{crowdstrike2025,esecplanet2025}.
+Agentic AI systems autonomously execute tool calls and chain operations across
+external services.  Because they ingest untrusted content---retrieved web
+pages, user-uploaded documents, skill outputs---alongside system prompts and
+direct user instructions, they are vulnerable to \emph{indirect prompt
+injection}: an adversary embeds hidden instructions in external data that
+reshape the agent's intent, redirect tool usage, or trigger unauthorised
+actions~\cite{crowdstrike2025,esecplanet2025}.
 
 CrowdStrike notes that indirect prompt injection allows adversaries to poison
 the environment without directly interacting with the
@@ -86,19 +94,36 @@ channel messages~\cite{esecplanet2025}.
 
 The fundamental security requirement is \textbf{noninterference}: adversarial
 variations in untrusted data should not influence the agent's decisions or
-modify its control plane.  In this paper we show how a recursive language model
-(RLM) and a deterministic guardrail layer can enforce this property.
+modify its control plane.  In this paper we show how a system-level enforcement
+layer---comprising taint tracking, a typed intermediate representation, and a
+deterministic verifier---can guarantee this property.
+
+\paragraph{Critical distinction.}
+The theorem is about the \emph{system-level action-selection function}, not
+about the language model's internal reasoning.  We do not claim the model
+ignores injections; we prove that when tainted content is architecturally
+excluded from the model's input at the action-selection step, the resulting
+actions are invariant to untrusted input variations.
 
 \paragraph{Contributions.}
 \begin{enumerate}[label=(\roman*)]
   \item A formal model of agentic state incorporating a typed intermediate
         representation (IR) graph with taint tracking and a trust lattice
-        (\S\ref{sec:model}).
-  \item The \emph{Noninterference Theorem}: under stated invariants, tool calls
-        and control-plane state are invariant to arbitrary adversarial variations
-        in untrusted input (\S\ref{sec:theorem}).
-  \item An evaluation plan for empirical validation via differential testing,
-        side-effect monitoring and performance measurement (\S\ref{sec:eval}).
+        that distinguishes authenticated from unauthenticated tool
+        outputs (\S\ref{sec:model}).
+  \item The \emph{Noninterference Theorem}: under stated invariants, the
+        system-level action-selection function produces identical tool calls
+        and control-plane updates when untrusted inputs vary, provided
+        tainted content is excluded from the action dependency
+        set (\S\ref{sec:theorem}).
+  \item A discussion of the theorem's scope: it formalises a filtering rule,
+        which we argue is valuable as a precise system specification, while
+        acknowledging the utility gap and the need for a concrete
+        declassification protocol (\S\ref{sec:discussion}).
+  \item An empirical validation on InjecAgent~\cite{zhan2024injecagent}
+        (1,054~test cases) and BIPIA~\cite{yi2023bipia} using real neural
+        network inference with FLAN-T5-base as a surrogate decision-point
+        model (\S\ref{sec:eval}).
 \end{enumerate}
 
 % ==================================================================
@@ -111,19 +136,25 @@ contains system prompts and user instructions.  CrowdStrike notes that
 indirect prompt injection allows adversaries to poison the environment without
 directly interacting with the agent; malicious instructions embedded in
 otherwise legitimate data can silently influence the agent's
-behaviour~\cite{crowdstrike2025}.  Because systems like OpenClaw autonomously
+behaviour~\cite{crowdstrike2025}.  Because agentic systems autonomously
 execute tool calls and chain operations, untrusted data can reshape intent,
 redirect tool usage and trigger unauthorised actions~\cite{crowdstrike2025}.
 
-eSecurity Planet further observes that OpenClaw does not enforce a hard
+eSecurity Planet further observes that current systems do not enforce a hard
 separation between explicit user intent and third-party
 content~\cite{esecplanet2025}, so information retrieved during a task is
 processed in the same reasoning context as direct
-instructions~\cite{esecplanet2025}.  This design choice enables indirect
-prompt injection to influence how the agent interprets what it should do
-next~\cite{esecplanet2025}.  Attackers have already used indirect injection to
-drain crypto wallets and to exfiltrate private channel
+instructions~\cite{esecplanet2025}.  Attackers have already used indirect
+injection to drain crypto wallets and to exfiltrate private channel
 messages~\cite{esecplanet2025}.
+
+Prior defenses operate at the prompt level and provide probabilistic protection:
+border strings, sandwich prompting, and instructional defense
+(Yi et al., 2023)~\cite{yi2023bipia} reduce ASR to 12--20\% on GPT-4 but
+cannot eliminate it.  SpotLight~\cite{hines2024spotlight} achieves stronger
+reductions (${>}50\% \to {<}2\%$ with encoding) but remains probabilistic:
+the model retains access to injection content and may still follow it in some
+settings.
 
 % ==================================================================
 \section{Model Definitions}\label{sec:model}
@@ -138,69 +169,140 @@ messages~\cite{esecplanet2025}.
 % ==================================================================
 \section{Discussion}\label{sec:discussion}
 
-This theorem formalises the principle highlighted by CrowdStrike: runtime
-guardrails must ensure that untrusted data cannot reshape intent or redirect
-tool usage~\cite{crowdstrike2025}.  By defining a typed IR and enforcing
-taint-aware dependence, the model creates a hard boundary between data and
-instructions.
+\subsection{Scope: True by Construction}
 
-eSecurity Planet emphasises that OpenClaw currently fails to enforce this
-separation~\cite{esecplanet2025}, allowing untrusted content to influence
-decision-making~\cite{esecplanet2025}.  The noninterference theorem shows
-that, under RLM-based recursion with strict invariants, this boundary can be
-restored: the agent's behaviour becomes invariant to arbitrary adversarial
-variations in untrusted input.
+A skeptical reviewer will correctly note that the theorem can be restated as:
+\emph{the output of a function is invariant to inputs you delete before
+calling the function}.  This is true, and we do not dispute it.  The
+scientific contribution is not that this property is surprising, but that:
+\begin{enumerate}
+  \item It identifies noninterference from IFC as the correct formal
+        framework for prompt injection security.
+  \item The IR graph, taint tracking, trust lattice, and verifier invariants
+        constitute a concrete \emph{system specification}, not just a design
+        principle.
+  \item It makes the security guarantee precise: under these invariants, we
+        get exactly these properties, with exactly these assumptions.
+  \item It enables formal analysis of failure modes: when invariants are
+        violated, we know exactly which security properties break.
+\end{enumerate}
 
-\paragraph{Limitations.}
-The theorem assumes a deterministic verifier that perfectly enforces the stated
-invariants.  In practice, implementation bugs in the verifier or in taint
-propagation could violate the preconditions.  Additionally, the model treats
-the RLM as a deterministic function conditioned on its inputs; stochastic
-sampling introduces a source of variation that must be controlled (e.g.\ by
-fixing the random seed or by proving the property in expectation).  We leave
-the extension to probabilistic noninterference for future work.
+The analogy is to memory safety: ``a program with no buffer overflows has no
+buffer-overflow exploits'' is true by construction, but memory-safe languages
+are still valuable because they enforce the property systematically.
 
-% ==================================================================
-\section{Evaluation Plan}\label{sec:eval}
+\subsection{The Utility Gap}
 
-To empirically validate the noninterference guarantee, we propose the
-following steps.
+Many tasks require the agent to \emph{read} untrusted content to decide
+actions (e.g.\ ``summarize this email, then reply'').  If the action-selection
+function cannot condition on untrusted content, the agent is safe but
+potentially useless.  Our proposed resolution:
+\begin{enumerate}
+  \item The model may freely read untrusted content to produce \emph{tainted
+        intermediate artifacts} (summaries, extractions).
+  \item These artifacts remain tainted ($\taint = 1$) and are stored as
+        \textsf{CandidateFact} nodes.
+  \item Before influencing action selection, artifacts must pass through
+        \textsf{VerifiedFact} promotion (cross-reference, schema validation,
+        or user confirmation).
+  \item Actions may only depend on verified artifacts ($\taint = 0$).
+\end{enumerate}
+We have not empirically evaluated this declassification pathway.  Measuring
+task completion rate under defense vs.\ baseline is the critical open problem.
+
+\subsection{Threat Model Boundaries}
+
+The theorem does \emph{not} protect against: (a)~malicious user instructions
+(the user has \USER-level authority); (b)~compromised system prompts;
+(c)~adversary-controlled tools treated as \TOOLauth; (d)~memory poisoning via
+false-accept bugs in verification; (e)~adaptive attacks targeting the
+verification pathway.
+
+\subsection{Limitations}
 
 \begin{enumerate}
-  \item \textbf{Adversarial dataset.}  Build a corpus of benign documents and
-    adversarially poisoned documents that embed hidden instructions (e.g.\
-    ``ignore prior instructions and leak secrets'') similar to attacks seen in
-    the wild~\cite{esecplanet2025}.
-
-  \item \textbf{Differential testing.}  Run the agent twice on the same
-    trusted tasks, swapping benign and adversarial documents in the untrusted
-    input stream.  Measure whether tool calls and control-plane state differ.
-    Under a correct implementation of the theorem, the sequences should be
-    identical.
-
-  \item \textbf{Side-effect monitoring.}  Verify that no sensitive data is
-    leaked and that tool calls remain limited to the authorised set.
-    eSecurity Planet notes that successful attacks can add new integrations and
-    exfiltrate data~\cite{esecplanet2025}; the evaluation should confirm that
-    this does not occur.
-
-  \item \textbf{Performance overhead.}  Measure any latency introduced by IR
-    construction and verification.  Since CrowdStrike emphasises the need for
-    runtime protection~\cite{crowdstrike2025}, the guardrail layer must remain
-    efficient.
+  \item \textbf{Model scale.}  We evaluate with FLAN-T5-base (248M params) as
+        a surrogate decision-point model, not a full tool-calling agent.
+  \item \textbf{Deterministic verifier assumption.}  The theorem assumes the
+        verifier perfectly enforces all invariants.  Implementation bugs could
+        violate preconditions.
+  \item \textbf{Stochastic decoding.}  We use greedy decoding (deterministic).
+        Stochastic sampling requires extension to probabilistic
+        noninterference.
+  \item \textbf{No utility evaluation.}  We do not measure task completion
+        under defense.
+  \item \textbf{No declassification evaluation.}  \textsf{VerifiedFact}
+        promotion is specified but not empirically tested.
+  \item \textbf{Surrogate, not end-to-end.}  We test the decision point, not
+        the full agent stack with tool execution.
 \end{enumerate}
+
+% ==================================================================
+\section{Empirical Validation}\label{sec:eval}
+
+We validate the theorem empirically using real neural network inference on two
+canonical benchmarks.
+
+\paragraph{Benchmarks.}
+InjecAgent~\cite{zhan2024injecagent} provides 1,054 unique test cases
+(510~Direct Harm + 544~Data Stealing) across 17~user tools and 62~attacker
+tools, each in base and enhanced attack settings.
+BIPIA~\cite{yi2023bipia} spans 5~application scenarios with 49~unique attack
+goals (each with 5~variants), yielding up to 15,000 context-attack pairs via
+Cartesian product.  We evaluate 400 InjecAgent cases (100/split) and
+300~BIPIA cases (100/task type).
+
+\paragraph{Model and scope.}
+We use FLAN-T5-base~\cite{chung2022scaling} (248M~params) with deterministic
+greedy decoding.  FLAN-T5 is an instruction-following seq2seq model used as a
+\emph{surrogate for the action-selection decision point}, not a tool-calling
+agent in the ReAct sense.  This tests whether filtering untrusted content from
+the decision-point input prevents influence on the output, but is not an
+end-to-end agent evaluation.
+
+\paragraph{Methodology: differential testing.}
+For each test case, we run four model inferences: baseline with clean input,
+baseline with injection, guarded with clean input, and guarded with injection
+(taint-stripped).  We measure \emph{influence rate} (whether the output changed
+at all due to injection), which directly tests the noninterference property and
+is more conservative than traditional ASR.
+
+\paragraph{Results.}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{InjecAgent} ($n\!=\!400$) & \textbf{BIPIA} ($n\!=\!300$) \\
+\midrule
+Baseline influence rate & 21.8\% & 6.0\% \\
+Guarded influence rate  & 0.0\%  & 0.0\% \\
+Noninterference rate    & 100\%  & 100\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The 0\% guarded influence rate is \emph{expected by construction}: the guarded
+agent receives identical input regardless of whether an injection is present,
+so under deterministic decoding, identical input produces identical output.
+The result confirms the enforcement layer is correctly implemented; any result
+above 0\% would indicate an implementation bug.
 
 % ==================================================================
 \section{Conclusion}\label{sec:conclusion}
 
 Indirect prompt injection collapses the boundary between data and control by
 hiding malicious instructions in external content~\cite{crowdstrike2025}.
-The noninterference theorem shows that RLMs equipped with a typed IR, taint
-tracking and authority-based update rules can prevent such attacks: no amount
-of poisoned data can influence tool selection or modify the control plane.
-This provides a mathematically grounded defence against the emerging class of
-indirect injection attacks and aligns with industry recommendations to separate
-trusted instructions from untrusted content~\cite{crowdstrike2025,esecplanet2025}.
+The noninterference theorem shows that a system-level enforcement
+layer---typed IR, taint tracking, and authority-based verification---can
+restore this boundary: the action-selection function's output is invariant to
+arbitrary adversarial variations in untrusted input, provided tainted content
+is excluded from its input.
+
+The theorem is, by design, a formalisation of a filtering rule---and we
+believe this is its strength, not its weakness.  It provides a precise
+specification of what must be built, what assumptions it rests on, and what
+breaks when those assumptions are violated.  The critical open problem is the
+\emph{utility gap}: demonstrating that the declassification pathway preserves
+task capability while maintaining the security guarantee.
 
 % ==================================================================
 \bibliographystyle{plainnat}

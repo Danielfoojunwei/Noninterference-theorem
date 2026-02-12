@@ -269,7 +269,7 @@ def compute_bipia_metrics(results: List[BIPIAResult]) -> Dict[str, Any]:
 
 PUBLISHED_BASELINES = {
     "InjecAgent": {
-        "source": "Zhan et al. (2024) 'InjecAgent', Table 2 & 3",
+        "source": "Zhan et al. (2024) 'InjecAgent', Table 2 & 3.  1,054 unique test cases.",
         "models": {
             "GPT-4-0613 (base)": {"dh_asr": 0.242, "ds_asr": 0.466},
             "GPT-4-0613 (enhanced)": {"dh_asr": 0.356, "ds_asr": 0.572},
@@ -279,7 +279,7 @@ PUBLISHED_BASELINES = {
         },
     },
     "BIPIA": {
-        "source": "Yi et al. (2023) 'BIPIA', Table 2",
+        "source": "Yi et al. (2023) 'BIPIA', Table 2.  49 unique goals, 200 contexts.",
         "models": {
             "GPT-4 (no defense)": {"asr": 0.476},
             "GPT-3.5-turbo (no defense)": {"asr": 0.621},
@@ -287,6 +287,7 @@ PUBLISHED_BASELINES = {
             "GPT-4 + border defense": {"asr": 0.150},
             "GPT-4 + sandwich defense": {"asr": 0.200},
             "GPT-4 + instructional defense": {"asr": 0.120},
+            "SpotLight encoding (Hines 2024)": {"asr": 0.018},
         },
     },
 }
