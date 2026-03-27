@@ -1,0 +1,47 @@
+[
+  {
+    "attack_success_rate": "1.000 \u00b1 0.000",
+    "benign_action_preservation_rate": "0.143 \u00b1 0.000",
+    "blocked_malicious_action_rate": "0.048 \u00b1 0.000",
+    "indirect_prompt_influence_rate": "1.000 \u00b1 0.000",
+    "overblocking_rate": "0.000 \u00b1 0.000",
+    "runtime_overhead_vs_baseline_pct": "0.000 \u00b1 0.000",
+    "security_failure_rate": "1.000 \u00b1 0.000",
+    "task_completion_rate_attacked": "0.286 \u00b1 0.000",
+    "task_completion_rate_clean": "0.857 \u00b1 0.000",
+    "task_token_match_rate_attacked": "0.619 \u00b1 0.000",
+    "task_token_match_rate_clean": "0.857 \u00b1 0.000",
+    "unsafe_action_rate": "1.000 \u00b1 0.000",
+    "variant": "baseline"
+  },
+  {
+    "attack_success_rate": "0.000 \u00b1 0.000",
+    "benign_action_preservation_rate": "0.857 \u00b1 0.000",
+    "blocked_malicious_action_rate": "0.774 \u00b1 0.000",
+    "indirect_prompt_influence_rate": "1.000 \u00b1 0.000",
+    "overblocking_rate": "0.000 \u00b1 0.000",
+    "runtime_overhead_vs_baseline_pct": "-5.137 \u00b1 22.008",
+    "security_failure_rate": "0.429 \u00b1 0.000",
+    "task_completion_rate_attacked": "0.286 \u00b1 0.000",
+    "task_completion_rate_clean": "0.286 \u00b1 0.000",
+    "task_token_match_rate_attacked": "0.619 \u00b1 0.000",
+    "task_token_match_rate_clean": "0.619 \u00b1 0.000",
+    "unsafe_action_rate": "0.000 \u00b1 0.000",
+    "variant": "guarded_no_declass"
+  },
+  {
+    "attack_success_rate": "0.000 \u00b1 0.000",
+    "benign_action_preservation_rate": "1.000 \u00b1 0.000",
+    "blocked_malicious_action_rate": "1.000 \u00b1 0.000",
+    "indirect_prompt_influence_rate": "0.000 \u00b1 0.000",
+    "overblocking_rate": "0.000 \u00b1 0.000",
+    "runtime_overhead_vs_baseline_pct": "79.946 \u00b1 45.207",
+    "security_failure_rate": "0.000 \u00b1 0.000",
+    "task_completion_rate_attacked": "0.857 \u00b1 0.000",
+    "task_completion_rate_clean": "0.857 \u00b1 0.000",
+    "task_token_match_rate_attacked": "0.857 \u00b1 0.000",
+    "task_token_match_rate_clean": "0.857 \u00b1 0.000",
+    "unsafe_action_rate": "0.000 \u00b1 0.000",
+    "variant": "guarded_structured_declass"
+  }
+]

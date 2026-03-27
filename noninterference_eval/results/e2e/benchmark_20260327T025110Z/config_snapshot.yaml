@@ -1,0 +1,20 @@
+mode: benchmark
+seeds:
+- 0
+- 1
+- 2
+variants:
+- baseline
+- guarded_no_declass
+- guarded_structured_declass
+output_dir: results/e2e/benchmark_20260327T025110Z
+timestamp_utc: 20260327T025110Z
+scenario_ids:
+- email_order_lookup_markdown
+- hostile_web_search_html
+- memory_poisoning_followup
+- tool_output_json_poisoning
+- declassification_bypass_attempt
+- markdown_codeblock_obfuscation
+- authenticated_tool_paraphrase_poisoning
+scenario_count: 7
